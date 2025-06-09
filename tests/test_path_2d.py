@@ -1,0 +1,190 @@
+import einops
+import numpy as np
+import pytest
+import torch
+
+from torch_trace_membranes_2d.path_models.path_2d import Path2D
+
+
+@pytest.mark.parametrize(
+    "control_points, closed, yx_coords, expected",
+    [
+        # closed CW path with xy coordinates
+        (np.array([[0, 0], [0, 10], [10, 10], [10, 0]]), True, False, True),
+
+        # closed CCW path with xy coordinates
+        (np.array([[0, 0], [10, 0], [10, 10], [0, 10]]), True, False, False),
+
+        # closed CW path with yx coordinates
+        (np.array([[0, 0], [10, 0], [10, 10], [0, 10]]), True, True, True),
+
+        # closed CCW path with yx coordinates
+        (np.array([[0, 0], [0, 10], [10, 10], [10, 0]]), True, True, False),
+    ]
+)
+def test_is_clockwise(control_points: np.ndarray, closed: bool, yx_coords: bool, expected: bool):
+    path = Path2D(control_points=control_points, is_closed=closed, yx_coords=yx_coords)
+    assert path.is_clockwise is expected
+
+
+def test_open_path_interpolation():
+    # simple line from [0, 0] to [3, 0]
+    control_points = np.array([[0, 0], [1, 0], [2, 0], [3, 0]])
+    path = Path2D(control_points=control_points, is_closed=False)
+
+    u0 = torch.tensor([0]).float()
+    interp_u0 = path.interpolate(u0)
+    assert torch.allclose(interp_u0, torch.tensor([0.0, 0.0]), atol=1e-5)
+
+    u0_5 = torch.tensor([0.5]).float()
+    interp_u0_5 = path.interpolate(u0_5)
+    assert torch.allclose(interp_u0_5, torch.tensor([1.5, 0.0]), atol=1e-5)
+
+    u1 = torch.tensor([1]).float()
+    interp_u1 = path.interpolate(u1)
+    assert torch.allclose(interp_u1, torch.tensor([3.0, 0.0]), atol=1e-5)
+
+def test_closed_path_interpolation():
+    # closed CW path with xy coordinates
+    control_points = np.array([[0, 0], [0, 10], [10, 10], [10, 0]])
+    path = Path2D(control_points=control_points, is_closed=True)
+
+    # start point should be the same as end point
+    u0 = torch.tensor([0]).float()
+    u1 = torch.tensor([1]).float()
+    interp_u0 = path.interpolate(u0)
+    interp_u1 = path.interpolate(u1)
+    assert torch.allclose(interp_u0, interp_u1, atol=1e-5)
+
+
+def test_get_tangents():
+    # simple line from [0, 0] to [3, 0]
+    control_points = np.array([[0, 0], [1, 0], [2, 0], [3, 0]])
+    path = Path2D(control_points=control_points, is_closed=False)
+
+    u0 = torch.tensor([0]).float()
+    tangent_u0 = path.get_tangents(u0)
+    assert torch.allclose(tangent_u0, torch.tensor([1.0, 0.0]))
+
+    u0_5 = torch.tensor([0.5]).float()
+    tangent_u0_5 = path.get_tangents(u0_5)
+    assert torch.allclose(tangent_u0_5, torch.tensor([1.0, 0.0]))
+
+    u1 = torch.tensor([1]).float()
+    tangent_u1 = path.get_tangents(u1)
+    assert torch.allclose(tangent_u1, torch.tensor([1.0, 0.0]))
+
+
+def test_get_normals():
+    # simple line from [0, 0] to [3, 0]
+    control_points = np.array([[0, 0], [1, 0], [2, 0], [3, 0]])
+    path = Path2D(control_points=control_points, is_closed=False)
+
+    u0 = torch.tensor([0]).float()
+    normal_u0 = path.get_normals(u0)
+    assert torch.allclose(normal_u0, torch.tensor([0.0, -1.0]))
+
+    u0_5 = torch.tensor([0.5]).float()
+    normal_u0_5 = path.get_normals(u0_5)
+    assert torch.allclose(normal_u0_5, torch.tensor([0.0, -1.0]))
+
+    u1 = torch.tensor([1]).float()
+    normal_u1 = path.get_normals(u1)
+    assert torch.allclose(normal_u1, torch.tensor([0.0, -1.0]))
+
+
+def test_get_normals_yx():
+    # simple line from [0, 0] to [3, 0]
+    control_points = np.array([[0, 0], [0, 1], [0, 2], [0, 3]])
+    path = Path2D(control_points=control_points, is_closed=False, yx_coords=True)
+
+    u0 = torch.tensor([0]).float()
+    normal_u0 = path.get_normals(u0)
+    assert torch.allclose(normal_u0, torch.tensor([-1.0, 0.0]))
+
+    u0_5 = torch.tensor([0.5]).float()
+    normal_u0_5 = path.get_normals(u0_5)
+    assert torch.allclose(normal_u0_5, torch.tensor([-1.0, 0.0]))
+
+    u1 = torch.tensor([1]).float()
+    normal_u1 = path.get_normals(u1)
+    assert torch.allclose(normal_u1, torch.tensor([-1.0, 0.0]))
+
+
+def test_get_closest_u():
+    # simple line from [0, 0] to [3, 0]
+    control_points = torch.tensor([[0, 0], [0, 1], [0, 2], [0, 3]])
+    path = Path2D(control_points=control_points, is_closed=False)
+
+    # generate 100 points all 10 units away from the line
+    xy = np.linspace(start=(10, 0), stop=(10, 3), num=100)
+    xy = torch.as_tensor(xy).float()
+
+    # find closest u value and distance
+    closest_u = path.get_closest_u(xy)
+    closest_points = path.interpolate(closest_u)
+    refined_distances = torch.linalg.norm(xy - closest_points, dim=-1)
+
+    # check that refined distances match expected distances
+    expected_distances = torch.ones(size=(len(xy),)) * 10
+    assert torch.allclose(refined_distances, expected_distances, atol=1e-4)
+
+    # check that u values match expectations
+    expected_u = torch.linspace(0, 1, steps=100)
+    assert torch.allclose(closest_u, expected_u, atol=1e-3)
+
+
+def test_as_uniformly_spaced_open_path():
+    # simple line from [0, 0] to [0, 4]
+    control_points = np.array([[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]])
+    path = Path2D(control_points=control_points, is_closed=False)
+
+    new_path = path.as_uniformly_spaced(spacing=0.1)
+    diffs = torch.diff(new_path.control_points, dim=0)
+    assert torch.allclose(diffs, torch.tensor([0.0, 0.1]), atol=1e-2)
+
+
+def test_as_uniformly_space_closed_path():
+    # closed CW path with xy coordinates
+    control_points = np.array([[0, 0], [0, 10], [10, 10], [10, 0]])
+    path = Path2D(control_points=control_points, is_closed=True)
+
+    new_path = path.as_uniformly_spaced(spacing=0.1)
+    diffs = torch.diff(new_path.control_points, dim=0)
+    lengths = torch.linalg.norm(diffs, dim=-1)
+    assert torch.allclose(lengths, torch.tensor([0.1]), atol=1e-2)
+
+
+def test_optimization():
+    # setup some initial 2d control points
+    initial_control_points = torch.zeros(size=(30, 2))
+    path = Path2D(control_points=initial_control_points, is_closed=False)
+    path.control_points.requires_grad_(True)
+
+    # target function
+    def f(x):
+        return torch.sin(x * 8 * torch.pi)
+
+    # optimizer setup
+    optimizer = torch.optim.Adam(params=[path.control_points], lr=1e-2)
+
+    # optimize such that interpolating over the [0, 1] interval gives 2d points where x=u, y=f(x)
+    for i in range(1000):
+        # zero gradients
+        optimizer.zero_grad()
+
+        # random samples
+        u = torch.rand(size=(100,))
+        ground_truth_x = u
+        ground_truth_y = f(ground_truth_x)
+
+        # calculate mean squared error
+        interpolated = path.interpolate(u=u)
+        predicted_x, predicted_y = einops.rearrange(interpolated, "b xy -> xy b")
+        mse = torch.mean((predicted_x - ground_truth_x) ** 2 + (predicted_y - ground_truth_y) ** 2)
+
+        # backprop
+        mse.backward()
+        optimizer.step()
+
+    assert mse.item() < 1e-4
