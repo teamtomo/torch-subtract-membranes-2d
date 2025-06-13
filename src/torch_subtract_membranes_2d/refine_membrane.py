@@ -108,16 +108,14 @@ def refine_membrane(
         # calculate loss
         weighted_mse = torch.mean(weights_1d * (membranogram - average_2d_scaled) ** 2)
         loss = weighted_mse
-        print(loss)
-        print("got loss value")
-        try:
-            loss.backward()
-        except Exception as e:
-            print(f"Error during backward pass: {e}")
+
+        # backprop and step optimizer
+        loss.backward()
         optimizer.step()
 
         # log loss
-        print(i, f"{loss.item()=}")
+        if i % 20 == 0:
+            print(i, f"{loss.item()}")
 
     # import napari
     # viewer = napari.Viewer()
