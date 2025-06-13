@@ -24,9 +24,13 @@ def model_membranes(
         membrane_mask = predict_membrane_mask(
             image=image,
             pixel_spacing=pixel_spacing_angstroms,
-            probability_threshold=0.8
+            probability_threshold=0.1
         )
         membrane_mask = membrane_mask.to(image.device)
+        import napari
+        viewer = napari.Viewer()
+        viewer.add_image(membrane_mask.cpu().numpy())
+        napari.run()
 
     # normalize and bandpass image
     image = normalize_2d(image)
