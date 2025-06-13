@@ -1,4 +1,4 @@
-* torch-trace-membranes-2d version:
+* torch-subtract-membranes-2d version:
 * Python version:
 * Operating System:
 

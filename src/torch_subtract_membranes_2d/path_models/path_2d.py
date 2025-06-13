@@ -288,7 +288,7 @@ if __name__ == "__main__":
     interpolated = path.interpolate(u)
     normals = path.get_normals(u)
 
-    from torch_trace_membranes_2d.utils.path_utils import find_pixels_around_path
+    from torch_subtract_membranes_2d.utils.path_utils import find_pixels_around_path
 
     idx_h, idx_w = find_pixels_around_path(
         path=path,

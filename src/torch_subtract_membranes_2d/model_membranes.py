@@ -1,18 +1,33 @@
 import torch
+from torch_segment_membranes_2d import predict_membrane_mask
 
-from torch_trace_membranes_2d.membrane_model import Membrane2D
-from torch_trace_membranes_2d.refine_membrane import refine_membrane
-from torch_trace_membranes_2d.utils.image_utils import bandpass_filter_image, normalize_2d
-from torch_trace_membranes_2d.utils.skeleton_utils import trace_paths_in_mask
+from torch_subtract_membranes_2d.membrane_model import Membrane2D
+from torch_subtract_membranes_2d.refine_membrane import refine_membrane
+from torch_subtract_membranes_2d.utils.image_utils import bandpass_filter_image, normalize_2d
+from torch_subtract_membranes_2d.utils.skeleton_utils import trace_paths_in_mask
 
 
-def trace_membranes(
+def model_membranes(
     image: torch.Tensor,
-    membrane_mask: torch.Tensor,
     pixel_spacing_angstroms: float,
     min_path_length_nm: int,
     control_point_spacing_nm: float,
+    membrane_mask: torch.Tensor | None = None,
 ) -> list[Membrane2D]:
+    # ensure correct input dtypes
+    image = image.float()
+    if membrane_mask is not None:
+        membrane_mask = membrane_mask.bool()
+
+    # predict membrane segmentation if required
+    if membrane_mask is None:
+        membrane_mask = predict_membrane_mask(
+            image=image,
+            pixel_spacing=pixel_spacing_angstroms,
+            probability_threshold=0.8
+        )
+        membrane_mask = membrane_mask.to(image.device)
+
     # normalize and bandpass image
     image = normalize_2d(image)
     image = bandpass_filter_image(

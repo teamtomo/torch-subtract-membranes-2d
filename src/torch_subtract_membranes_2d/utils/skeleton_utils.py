@@ -3,7 +3,7 @@ import skan
 import skimage
 import torch
 
-from torch_trace_membranes_2d.path_models.path_2d import Path2D
+from torch_subtract_membranes_2d.path_models.path_2d import Path2D
 
 
 def prune_branches(skeleton: skan.Skeleton) -> skan.Skeleton:
@@ -28,6 +28,7 @@ def prune_branches(skeleton: skan.Skeleton) -> skan.Skeleton:
 
     # prune the shortest paths
     if paths_to_prune:
+        print(list(paths_to_prune))
         pruned_skeleton = skeleton.prune_paths(list(paths_to_prune))
     else:
         pruned_skeleton = skeleton

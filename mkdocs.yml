@@ -1,9 +1,9 @@
-site_name: torch-trace-membranes-2d
+site_name: torch-subtract-membranes-2d
 site_author: alisterburt
 site_description: >-
-  Documentation for torch-trace-membranes-2d
-repo_name: teamtomo/torch-trace-membranes-2d
-repo_url: https://github.com/teamtomo/torch-trace-membranes-2d
+  Documentation for torch-subtract-membranes-2d
+repo_name: teamtomo/torch-subtract-membranes-2d
+repo_url: https://github.com/teamtomo/torch-subtract-membranes-2d
 edit_uri: edit/main/docs/
 
 copyright: Copyright &copy; 2025 - 2025 teamtomo

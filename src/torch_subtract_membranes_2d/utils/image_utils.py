@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch_fourier_filter.bandpass import bandpass_filter
-from torch_fourier_shift import fourier_shift_image_1d
 
 
 def normalize_2d(image: torch.Tensor):
@@ -44,8 +43,6 @@ def bandpass_filter_image(
 
     # falloff
     falloff = spatial_frequency_to_fftfreq(1 / (2 * highpass_angstroms), spacing=pixel_spacing)
-    print(falloff)
-
 
     filter = bandpass_filter(
         low=low,
@@ -53,7 +50,8 @@ def bandpass_filter_image(
         falloff=falloff,
         image_shape=image.shape[-2:],
         rfft=True,
-        fftshift=False
+        fftshift=False,
+        device=image.device,
     )
 
     # apply filter to dft
@@ -130,100 +128,3 @@ def smooth_tophat_1d(
             weights[right_start:right_end] = rolloff_values
 
     return weights
-
-
-def center_of_mass_1d(image: torch.Tensor) -> torch.Tensor:
-    positions = torch.arange(len(image), dtype=image.dtype, device=image.device)
-    image = image - torch.min(image)
-    total_mass = torch.sum(image)
-    weighted_positions = torch.sum(positions * image)
-    center_of_mass = weighted_positions / total_mass
-    return center_of_mass
-
-
-def center_1d_profile(image: torch.Tensor) -> torch.Tensor:
-    # grab signal length
-    w = len(image)
-    # estimate background
-    background = apply_gaussian_filter_1d(
-        signal=image,
-        kernel_size=w // 3,
-        sigma=w / 3,
-    )
-    image_no_center = image.clone()
-    cutoff = int(0.25 * w)
-    mean = torch.mean(torch.cat([image[:cutoff], image[-cutoff:]]))
-    image_no_center[cutoff:-cutoff] = mean
-    dft = torch.fft.rfft(image_no_center, dim=-1)
-    idx_high = torch.fft.rfftfreq(w) > 0.025
-    dft[idx_high] = 0
-    background = torch.fft.irfft(dft, dim=-1, n=w)
-
-    # calculate center of mass after subtracting background
-    background_subtracted = image - background
-    background_subtracted_positive_membrane = -1 * background_subtracted
-    center_of_mass = center_of_mass_1d(background_subtracted_positive_membrane)
-
-    # from matplotlib import pyplot as plt
-    # fig, ax = plt.subplots()
-    # ax.plot(image.detach(), label="image")
-    # ax.plot(image_no_center.detach(), label="image (membrane erased)")
-    # ax.plot(background.detach(), label="background")
-    # ax.plot((image - background).detach(), label="image - background")
-    # # ax.stem(center_of_mass.detach(), torch.max(image).detach(), label="center of mass")
-    # ax.legend(loc="best")
-    # plt.show()
-
-    # calculate how much to shift profile by
-    center = len(image) / 2
-    shift = -1 * (center_of_mass - center)
-    shift = torch.as_tensor(shift, device=image.device)
-
-    # center the profile
-    centered_image = fourier_shift_image_1d(image=image, shifts=shift)
-    return centered_image
-
-
-def gaussian_kernel_1d(kernel_size, sigma):
-    """
-    Create a 1D Gaussian kernel.
-
-    Args:
-        kernel_size (int): Size of the kernel (should be odd)
-        sigma (float): Standard deviation of the Gaussian
-
-    Returns:
-        torch.Tensor: 1D Gaussian kernel
-    """
-    # Ensure kernel_size is odd
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-
-    # Create coordinate grid
-    coords = torch.arange(kernel_size, dtype=torch.float32)
-    coords -= kernel_size // 2
-
-    # Compute Gaussian values
-    kernel = torch.exp(-(coords ** 2) / (2 * sigma ** 2))
-
-    # Normalize so sum equals 1
-    kernel = kernel / kernel.sum()
-
-    return kernel
-
-
-def apply_gaussian_filter_1d(signal, kernel_size=5, sigma=1.0):
-    # (w, ) -> (c, h, w)
-    signal = einops.rearrange(signal, "w -> 1 1 w")
-
-    # Create Gaussian kernel with (c, h, w)
-    kernel = gaussian_kernel_1d(kernel_size, sigma)
-    kernel = einops.rearrange(kernel, "w -> 1 1 w")
-
-    # Apply convolution
-    pad = kernel_size // 2
-    filtered = F.conv1d(signal, kernel, padding=pad)
-
-    # (c, h, w) -> (w, )
-    filtered = einops.rearrange(filtered, "1 1 w -> w")
-    return filtered

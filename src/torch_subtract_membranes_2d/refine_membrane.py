@@ -1,12 +1,12 @@
 import einops
 import torch
 
-from torch_trace_membranes_2d.membrane_model import Membrane2D
-from torch_trace_membranes_2d.path_models.path_1d import Path1D
-from torch_trace_membranes_2d.path_models.path_2d import Path2D
-from torch_trace_membranes_2d.utils.image_utils import smooth_tophat_1d
-from torch_trace_membranes_2d.utils.path_utils import sample_image_along_path
-from torch_trace_membranes_2d.constants import MEMBRANE_BILAYER_WIDTH_ANGSTROMS
+from torch_subtract_membranes_2d.membrane_model import Membrane2D
+from torch_subtract_membranes_2d.path_models.path_1d import Path1D
+from torch_subtract_membranes_2d.path_models.path_2d import Path2D
+from torch_subtract_membranes_2d.utils.image_utils import smooth_tophat_1d
+from torch_subtract_membranes_2d.utils.path_utils import sample_image_along_path
+from torch_subtract_membranes_2d.constants import MEMBRANE_BILAYER_WIDTH_ANGSTROMS
 
 
 def refine_membrane(
@@ -14,15 +14,17 @@ def refine_membrane(
     image: torch.Tensor,
     pixel_spacing_angstroms: float,
     n_iterations: int = 500,
-    refine_signal_scale: bool = True,
 ) -> Membrane2D:
+    # get device
+    device = image.device
+
     # grab original control points
     original_control_points = path.control_points.clone()
     n_control_points = len(original_control_points)
 
     # grab normals to path at initial control point positions
     u_at_control_points = path.get_closest_u(query_points=original_control_points)
-    normals_at_control_points = path.get_normals(u=u_at_control_points)
+    normals_at_control_points = path.get_normals(u=u_at_control_points).to(device)
 
     # set up distances from path for each sample perpendicular to path
     maximum_distance = (2 * MEMBRANE_BILAYER_WIDTH_ANGSTROMS) / pixel_spacing_angstroms
@@ -40,19 +42,21 @@ def refine_membrane(
     )
 
     # setup parameters to be optimized
-    perpendicular_shifts_nanometers = torch.zeros(size=(n_control_points,), requires_grad=True)
-    signal_scale_control_points = torch.ones(size=(n_control_points,), requires_grad=True)
+    perpendicular_shifts_nanometers = torch.zeros(size=(n_control_points,), requires_grad=True, device=device)
+    signal_scale_control_points = torch.ones(size=(n_control_points,), requires_grad=True, device=device)
 
     # setup optimizer
-    if refine_signal_scale:
-        params = [perpendicular_shifts_nanometers, signal_scale_control_points]
-    else:
-        params = [perpendicular_shifts_nanometers]
+    params = [
+        perpendicular_shifts_nanometers,
+        signal_scale_control_points,
+    ]
     optimizer = torch.optim.Adam(
         params=params,
         lr=0.01,
     )
 
+
+    # start refinement
     for i in range(n_iterations):
         # zero gradients
         optimizer.zero_grad()
@@ -61,7 +65,7 @@ def refine_membrane(
         # first scale to pixels
         perpendicular_shifts_px = (perpendicular_shifts_nanometers * 10) / pixel_spacing_angstroms
 
-        # subtract the mean to prevent membranes "flying away"
+        # subtract the mean from shifts to prevent membranes "flying away"
         perpendicular_shifts_px = perpendicular_shifts_px - torch.mean(perpendicular_shifts_px)
 
         # move control points along path normal vectors
@@ -69,6 +73,7 @@ def refine_membrane(
         # normals: (n_control_points, 2)
         perpendicular_shifts_px = einops.repeat(perpendicular_shifts_px, "b -> b 2")
         shifts = perpendicular_shifts_px * normals_at_control_points
+        shifts = shifts.to(device)
         updated_control_points = original_control_points + shifts
 
         # construct Path2D from updated control points
@@ -78,7 +83,7 @@ def refine_membrane(
         membranogram, out_of_bounds_mask = sample_image_along_path(
             path=path,
             image=image,
-            perpendicular_steps=perpendicular_steps,
+            sample_distances=perpendicular_steps,
             n_samples=membranogram_h
         )
         if i == 0:
@@ -103,28 +108,37 @@ def refine_membrane(
         # calculate loss
         weighted_mse = torch.mean(weights_1d * (membranogram - average_2d_scaled) ** 2)
         loss = weighted_mse
-        loss.backward()
+        print(loss)
+        print("got loss value")
+        try:
+            loss.backward()
+        except Exception as e:
+            print(f"Error during backward pass: {e}")
         optimizer.step()
 
         # log loss
         print(i, f"{loss.item()=}")
 
+    # import napari
+    # viewer = napari.Viewer()
+    # viewer.add_image(torch.stack(membranograms, dim=0).detach().numpy())
+    # napari.run()
     # viz
-    from matplotlib import pyplot as plt
+    # from matplotlib import pyplot as plt
+    #
+    # fig, ax = plt.subplots()
+    # ax.plot(average_1d.detach().cpu().numpy())
+    # plt.show()
 
-    fig, ax = plt.subplots()
-    ax.plot(average_1d.detach().cpu().numpy())
-    plt.show()
-
-    fig, ax = plt.subplots(ncols=3)
-    ax[0].imshow(original_membranogram.detach(), cmap="gray")
-    ax[1].imshow(membranogram.detach().cpu().numpy(), cmap="gray")
-    ax[2].imshow(average_2d_scaled.detach().cpu().numpy(), cmap="gray")
-    ax[0].axis('off')
-    ax[1].axis('off')
-    ax[2].axis('off')
-    fig.tight_layout()
-    plt.show()
+    # fig, ax = plt.subplots(ncols=3)
+    # ax[0].imshow(original_membranogram.detach(), cmap="gray")
+    # ax[1].imshow(membranogram.detach().cpu().numpy(), cmap="gray")
+    # ax[2].imshow(average_2d_scaled.detach().cpu().numpy(), cmap="gray")
+    # ax[0].axis('off')
+    # ax[1].axis('off')
+    # ax[2].axis('off')
+    # fig.tight_layout()
+    # plt.show()
 
     return Membrane2D(
         profile_1d=average_1d.detach(),

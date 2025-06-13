@@ -4,7 +4,7 @@ import torch
 import scipy.ndimage as ndi
 from torch_image_interpolation import sample_image_2d, insert_into_image_1d
 
-from torch_trace_membranes_2d.path_models.path_2d import Path2D
+from torch_subtract_membranes_2d.path_models.path_2d import Path2D
 
 
 def rasterize_path(
@@ -88,7 +88,7 @@ def calculate_1d_average_along_path(
 def sample_image_along_path(
     path: Path2D,
     image: torch.Tensor,
-    perpendicular_steps: torch.Tensor,
+    sample_distances: torch.Tensor,
     n_samples: int
 ) -> torch.Tensor:
     """Sample an image along a path.
@@ -99,8 +99,8 @@ def sample_image_along_path(
         The path to be sampled.
     image: torch.Tensor
         `(h, w)` array containing image data
-    perpendicular_steps: torch.Tensor
-        `(w, )` array of values defining the distance from the path of each sample
+    sample_distances: torch.Tensor
+        `(w, )` array of signed distances from the path at which to sample
     n_samples: int
         Number of segments perpendicular to the path to generate
 
@@ -109,19 +109,22 @@ def sample_image_along_path(
     (result, mask): torch.Tensor
         `(n_samples, w)` array containing `w` samples at `n_samples` points along the path.
     """
+    # grab device
+    device = image.device
+
     # sample points and normals along path
-    u = torch.linspace(0, 1, n_samples)
+    u = torch.linspace(0, 1, n_samples, device=device)
     points = path.interpolate(u)  # (n_samples, 2)
     normals = path.get_normals(u)  # (n_samples, 2)
 
     # Generate sampling coordinates along normals for each point
     # shape: (n_samples, n_perpendicular_steps, 2)
     h, w = image.shape[-2:]
-    h_out, w_out = n_samples, len(perpendicular_steps)
+    h_out, w_out = n_samples, len(sample_distances)
     points = einops.repeat(points, "h yx -> h w yx", w=w_out)
-    perpendicular_steps = einops.repeat(perpendicular_steps, "w -> h w yx", h=h_out, yx=2)
+    sample_distances = einops.repeat(sample_distances, "w -> h w yx", h=h_out, yx=2)
     normals = einops.repeat(normals, "h yx -> h w yx", w=w_out)
-    sampling_coords = points + perpendicular_steps * normals
+    sampling_coords = points + sample_distances * normals
 
     # take samples
     result = sample_image_2d(image=image, coordinates=sampling_coords)

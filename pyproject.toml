@@ -15,7 +15,7 @@ sources = ["src"]
 
 # https://peps.python.org/pep-0621/
 [project]
-name = "torch-trace-membranes-2d"
+name = "torch-subtract-membranes-2d"
 dynamic = ["version"]
 description = "Model membranes in cryo-EM images for accurate signal subtraction"
 readme = "README.md"
@@ -35,15 +35,16 @@ classifiers = [
 ]
 # add your package dependencies here
 dependencies = [
-    "einops>=0.8.1",
-    "scipy>=1.13.1",
-    "skan>=0.12.2",
-    "torch>=2.7.0",
-    "torch-fourier-filter>=0.2.4",
-    "torch-image-interpolation>=0.0.9",
-    "torch-fourier-rescale>=0.1.1",
-    "torch-cubic-spline-grids>=0.0.10",
-    "torch-fourier-shift>=0.0.6",
+    "einops",
+    "scipy",
+    "skan",
+    "torch",
+    "torch-fourier-filter",
+    "torch-image-interpolation",
+    "torch-fourier-rescale",
+    "torch-cubic-spline-grids",
+    "torch-segment-membranes-2d>=0.0.1",
+    "pydantic>=2",
 ]
 
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies
@@ -62,17 +63,17 @@ dev = [
 ]
 
 [project.urls]
-homepage = "https://github.com/teamtomo/torch-trace-membranes-2d"
-repository = "https://github.com/teamtomo/torch-trace-membranes-2d"
+homepage = "https://github.com/teamtomo/torch-subtract-membranes-2d"
+repository = "https://github.com/teamtomo/torch-subtract-membranes-2d"
 
 # Entry points
 # https://peps.python.org/pep-0621/#entry-points
 # same as console_scripts entry point
 # [project.scripts]
-# torch-trace-membranes-2d-cli = "torch_trace_membranes_2d:main_cli"
+# torch-subtract-membranes-2d-cli = "torch_subtract_membranes_2d:main_cli"
 
 # [project.entry-points."some.group"]
-# tomatoes = "torch_trace_membranes_2d:main_tomatoes"
+# tomatoes = "torch_subtract_membranes_2d:main_tomatoes"
 
 # https://docs.astral.sh/ruff
 [tool.ruff]
@@ -144,7 +145,7 @@ exclude_lines = [
 ]
 
 [tool.coverage.run]
-source = ["torch_trace_membranes_2d"]
+source = ["torch_subtract_membranes_2d"]
 
 # https://github.com/mgedmin/check-manifest#configuration
 # add files that you want check-manifest to explicitly ignore here

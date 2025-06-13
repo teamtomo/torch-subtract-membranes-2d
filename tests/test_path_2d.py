@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import torch
 
-from torch_trace_membranes_2d.path_models.path_2d import Path2D
+from torch_subtract_membranes_2d.path_models.path_2d import Path2D
 
 
 @pytest.mark.parametrize(

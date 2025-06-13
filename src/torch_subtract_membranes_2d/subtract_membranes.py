@@ -2,10 +2,10 @@ from unicodedata import normalize
 
 import torch
 
-from torch_trace_membranes_2d.constants import REFINEMENT_HIGHPASS_ANGSTROMS
-from torch_trace_membranes_2d.membrane_model import Membrane2D
-from torch_trace_membranes_2d.utils.image_utils import bandpass_filter_image, normalize_2d
-from torch_trace_membranes_2d.render_membranes import render_membrane_image
+from torch_subtract_membranes_2d.constants import REFINEMENT_HIGHPASS_ANGSTROMS
+from torch_subtract_membranes_2d.membrane_model import Membrane2D
+from torch_subtract_membranes_2d.utils.image_utils import bandpass_filter_image, normalize_2d
+from torch_subtract_membranes_2d.render_membranes import render_membrane_image
 
 
 def subtract_membranes(

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from torch_trace_membranes_2d.path_models.path_1d import Path1D
+from torch_subtract_membranes_2d.path_models.path_1d import Path1D
 
 
 def test_open_path_interpolation():
