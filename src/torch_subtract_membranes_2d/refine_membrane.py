@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import einops
 import torch
 
@@ -57,6 +59,10 @@ def refine_membrane(
         lr=0.01,
     )
 
+    # Initialize loss tracking
+    min_loss = float('inf')
+    initial_loss = float('-inf')
+    recent_losses = []
 
     # start refinement
     for i in range(n_iterations):
@@ -117,9 +123,28 @@ def refine_membrane(
         loss.backward()
         optimizer.step()
 
-        # log loss
-        if i % 20 == 0:
-            print(i, f"{loss.item()}")
+        # Update loss tracking
+        current_loss = loss.item()
+        min_loss = min(min_loss, current_loss)
+        if i == 0:
+            initial_loss = deepcopy(current_loss)
+
+        recent_losses.append(current_loss)
+        if len(recent_losses) > 10:
+            recent_losses.pop(0)
+
+        # Calculate average difference if we have enough data
+        avg_diff = 0
+        if len(recent_losses) >= 2:
+            diffs = [recent_losses[i] - recent_losses[i - 1] for i in range(1, len(recent_losses))]
+            avg_diff = sum(diffs) / len(diffs)
+
+        # logging
+        progress_msg = f"{i + 1:4d}/{n_iterations} | loss: {current_loss:.6f} (initial: {initial_loss:.6f} min: {min_loss:.6f} delta: {avg_diff:.1e})"
+        if i == n_iterations - 1:
+            print(f"\r{progress_msg}")
+        else:
+            print(f"\r{progress_msg}", end="", flush=True)
 
     if IS_DEBUG:
         from matplotlib import pyplot as plt

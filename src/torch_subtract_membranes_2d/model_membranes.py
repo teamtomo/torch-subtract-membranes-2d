@@ -1,3 +1,5 @@
+import logging
+
 import torch
 from torch_segment_membranes_2d import predict_membrane_mask
 
@@ -21,6 +23,7 @@ def model_membranes(
         membrane_mask = membrane_mask.to(device=image.device, dtype=torch.bool)
 
     # normalize and bandpass image
+    print("Normalizing and filtering input image...")
     image = normalize_2d(image)
     image = bandpass_filter_image(
         image=image,
@@ -28,6 +31,7 @@ def model_membranes(
         highpass_angstroms=300,
         lowpass_angstroms=20,
     )
+    print("Input image normalized and filtered")
 
     if IS_DEBUG:
         from matplotlib import pyplot as plt
@@ -38,12 +42,15 @@ def model_membranes(
 
     # predict membrane segmentation if required
     if membrane_mask is None:
+        print("Predicting membrane mask...")
+        logging.getLogger("lightning.pytorch").setLevel(logging.ERROR)
         membrane_mask = predict_membrane_mask(
             image=image,
             pixel_spacing=pixel_spacing_angstroms,
             probability_threshold=0.1
         )
         membrane_mask = membrane_mask.to(image.device)
+        print("Membrane mask predicted")
 
     if IS_DEBUG:
         from matplotlib import pyplot as plt
@@ -53,16 +60,19 @@ def model_membranes(
         plt.show()
 
     # trace paths for each membrane in mask
+    print("Tracing paths in membrane mask...")
     paths = trace_paths_in_mask(
         membrane_mask=membrane_mask,
         pixel_spacing_angstroms=pixel_spacing_angstroms,
         min_path_length_nm=min_path_length_nm,
         control_point_spacing_nm=control_point_spacing_nm,
     )
+    print(f"Traced {len(paths)} membranes")
 
     # refine membrane models against image data
     membrane_models: list[Membrane2D] = []
     for idx, path in enumerate(paths):
+        print(f"Refining membrane {idx + 1}/{len(paths)}")
         refined_membrane = refine_membrane(
             path=path,
             image=image,
