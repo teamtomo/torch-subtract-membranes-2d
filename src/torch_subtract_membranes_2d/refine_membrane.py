@@ -136,7 +136,7 @@ def refine_membrane(
         # Calculate average difference if we have enough data
         avg_diff = 0
         if len(recent_losses) >= 2:
-            diffs = [recent_losses[i] - recent_losses[i - 1] for i in range(1, len(recent_losses))]
+            diffs = [abs(recent_losses[i] - recent_losses[i - 1]) for i in range(1, len(recent_losses))]
             avg_diff = sum(diffs) / len(diffs)
 
         # logging

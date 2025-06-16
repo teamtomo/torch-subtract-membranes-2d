@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import torch
 
 from torch_subtract_membranes_2d.constants import REFINEMENT_HIGHPASS_ANGSTROMS
@@ -5,6 +7,7 @@ from torch_subtract_membranes_2d.membrane_model import Membrane2D
 from torch_subtract_membranes_2d.utils import IS_DEBUG
 from torch_subtract_membranes_2d.utils.debug_utils import set_matplotlib_resolution
 from torch_subtract_membranes_2d.utils.image_utils import bandpass_filter_image, normalize_2d
+from torch_subtract_membranes_2d.utils.datetime_utils import humanize_timedelta
 from torch_subtract_membranes_2d.render_membranes import render_membrane_image
 
 
@@ -27,6 +30,7 @@ def subtract_membranes(
     )
 
     # render membrane image
+    start = datetime.now()
     membrane_image = render_membrane_image(
         membranes=membranes,
         image_shape=(h, w),
@@ -35,6 +39,9 @@ def subtract_membranes(
 
     # subtract membrane image from bandpassed image
     subtracted = image - (subtraction_factor * membrane_image)
+    end = datetime.now()
+    print(f"time taken for membrane subtraction: {humanize_timedelta(end - start)}")
+
 
     if IS_DEBUG:
         from torch_fourier_rescale import fourier_rescale_2d
