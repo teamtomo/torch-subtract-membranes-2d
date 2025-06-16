@@ -10,15 +10,16 @@ from torch_subtract_membranes_2d.utils.path_utils import find_pixels_around_path
 
 def render_membrane_image(
     membranes: list[Membrane2D],
-    image_shape: tuple[int, int]
+    image_shape: tuple[int, int],
+    device: torch.device,
 ) -> torch.Tensor:
     # create image for output
-    membrane_image = torch.zeros(image_shape, dtype=torch.float32)
+    membrane_image = torch.zeros(image_shape, dtype=torch.float32, device=device)
 
     # render membranes one by one
     for idx, membrane in enumerate(membranes):
         membrane_image += _render_single_membrane_image(
-            membrane=membrane, image_shape=image_shape
+            membrane=membrane, image_shape=image_shape, device=device
         )
     return membrane_image
 
@@ -26,7 +27,7 @@ def render_membrane_image(
 def _render_single_membrane_image(
     membrane: Membrane2D,
     image_shape: tuple[int, int],
-    device: torch.device | None = None,
+    device: torch.device,
 ) -> torch.Tensor:
     # create image for output
     image = torch.zeros(image_shape, dtype=torch.float32, device=device)
@@ -39,6 +40,7 @@ def _render_single_membrane_image(
         maximum_distance=maximum_distance
     )
     membrane_pixel_positions = einops.rearrange([idx_h, idx_w], "yx b -> b yx")
+    membrane_pixel_positions = membrane_pixel_positions.to(device)
 
     # get signed distance from membrane at each pixel position
     closest_u = membrane.path.get_closest_u(
