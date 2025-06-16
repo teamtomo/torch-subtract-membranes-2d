@@ -4,6 +4,8 @@ import torch
 from torch_subtract_membranes_2d.membrane_model import Membrane2D
 from torch_subtract_membranes_2d.path_models.path_1d import Path1D
 from torch_subtract_membranes_2d.path_models.path_2d import Path2D
+from torch_subtract_membranes_2d.utils import IS_DEBUG
+from torch_subtract_membranes_2d.utils.debug_utils import set_matplotlib_resolution
 from torch_subtract_membranes_2d.utils.image_utils import smooth_tophat_1d
 from torch_subtract_membranes_2d.utils.path_utils import sample_image_along_path
 from torch_subtract_membranes_2d.constants import MEMBRANE_BILAYER_WIDTH_ANGSTROMS
@@ -86,8 +88,6 @@ def refine_membrane(
             sample_distances=perpendicular_steps,
             n_samples=membranogram_h
         )
-        if i == 0:
-            original_membranogram = membranogram.clone()
 
         # make 1d average
         average_1d = torch.mean(membranogram, dim=0)
@@ -105,6 +105,10 @@ def refine_membrane(
         average_2d_scaled = average_1d * signal_scale_estimates
         average_2d_scaled = average_2d_scaled * out_of_bounds_mask
 
+        if i == 0:
+            original_membranogram = membranogram.clone().detach().cpu().numpy()
+            original_average_2d_scaled = average_2d_scaled.clone().detach().cpu().numpy()
+
         # calculate loss
         weighted_mse = torch.mean(weights_1d * (membranogram - average_2d_scaled) ** 2)
         loss = weighted_mse
@@ -117,26 +121,24 @@ def refine_membrane(
         if i % 20 == 0:
             print(i, f"{loss.item()}")
 
-    # import napari
-    # viewer = napari.Viewer()
-    # viewer.add_image(torch.stack(membranograms, dim=0).detach().numpy())
-    # napari.run()
-    # viz
-    # from matplotlib import pyplot as plt
-    #
-    # fig, ax = plt.subplots()
-    # ax.plot(average_1d.detach().cpu().numpy())
-    # plt.show()
-
-    # fig, ax = plt.subplots(ncols=3)
-    # ax[0].imshow(original_membranogram.detach(), cmap="gray")
-    # ax[1].imshow(membranogram.detach().cpu().numpy(), cmap="gray")
-    # ax[2].imshow(average_2d_scaled.detach().cpu().numpy(), cmap="gray")
-    # ax[0].axis('off')
-    # ax[1].axis('off')
-    # ax[2].axis('off')
-    # fig.tight_layout()
-    # plt.show()
+    if IS_DEBUG:
+        from matplotlib import pyplot as plt
+        plt.show()
+        fig, ax = plt.subplots(ncols=4)
+        ax[0].set_title("initial\ndata")
+        ax[0].imshow(original_membranogram, cmap="gray")
+        ax[1].set_title("initial\nreconstruction")
+        ax[1].imshow(original_average_2d_scaled, cmap="gray")
+        ax[2].set_title("refined\ndata")
+        ax[2].imshow(membranogram.detach().cpu().numpy(), cmap="gray")
+        ax[3].set_title("refined\nreconstruction")
+        ax[3].imshow(average_2d_scaled.detach().cpu().numpy(), cmap="gray")
+        ax[0].axis('off')
+        ax[1].axis('off')
+        ax[2].axis('off')
+        ax[3].axis('off')
+        fig.tight_layout()
+        plt.show()
 
     return Membrane2D(
         profile_1d=average_1d.detach(),
@@ -145,3 +147,6 @@ def refine_membrane(
         signal_scale_control_points=signal_scale_control_points.detach(),
         path_is_closed=path.is_closed,
     )
+
+if IS_DEBUG:
+    set_matplotlib_resolution()
