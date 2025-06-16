@@ -18,7 +18,7 @@ def model_membranes(
     # ensure correct input dtypes
     image = image.float()
     if membrane_mask is not None:
-        membrane_mask = membrane_mask.bool()
+        membrane_mask = membrane_mask.to(device=image.device, dtype=torch.bool)
 
     # normalize and bandpass image
     image = normalize_2d(image)

@@ -17,7 +17,7 @@ def test_sample_image_along_path():
     control_points = einops.rearrange([y, x], "yx b -> b yx")
     path = Path2D(control_points=control_points, is_closed=True, yx_coords=True)
     perpendicular_steps = torch.arange(start=-5, end=6, step=1)  # [-5, ..., 5]
-    samples, mask = sample_image_along_path(image=circle_image, path=path, n_samples=100, sample_distances=perpendicular_steps)
+    samples, mask = sample_image_along_path(image=circle_image, path=path, n_samples=100, distances=perpendicular_steps)
 
     assert torch.allclose(samples[:, :4], torch.ones_like(samples[:, :4]), atol=1e-5)
     assert torch.allclose(samples[:, 7:], torch.zeros_like(samples[:, 7:]), atol=1e-5)

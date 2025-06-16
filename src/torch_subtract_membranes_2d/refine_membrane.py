@@ -41,7 +41,7 @@ def refine_membrane(
         length=len(perpendicular_steps),
         center_width=len(perpendicular_steps) // 3,
         rolloff_width=len(perpendicular_steps) // 5,
-    )
+    ).to(device)
 
     # setup parameters to be optimized
     perpendicular_shifts_nanometers = torch.zeros(size=(n_control_points,), requires_grad=True, device=device)
@@ -85,7 +85,7 @@ def refine_membrane(
         membranogram, out_of_bounds_mask = sample_image_along_path(
             path=path,
             image=image,
-            sample_distances=perpendicular_steps,
+            distances=perpendicular_steps,
             n_samples=membranogram_h
         )
 

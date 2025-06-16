@@ -51,13 +51,12 @@ def remove_short_paths(skeleton: skan.Skeleton, min_length: int) -> skan.Skeleto
         return skeleton
 
 
-def skeleton_to_paths(
-    skeleton: skan.Skeleton,
-    control_point_spacing: float
+def skeleton_to_uniformly_spaced_paths(
+        skeleton: skan.Skeleton,
+        control_point_spacing: float,
+        device: torch.device,
 ) -> list[Path2D]:
     """Convert a skeleton into a list of Path2Ds"""
-    # we must determine for each path if it is closed or not to construct a path
-
     # define closure for checking if path is closed
     # condition: a closed path has no ends
     endpoints = skeleton.coordinates[skeleton.degrees == 1]
@@ -72,24 +71,32 @@ def skeleton_to_paths(
     # construct path objects
     paths = [
         Path2D(
-            control_points=skeleton.path_coordinates(i),
+            control_points=torch.as_tensor(
+                skeleton.path_coordinates(i),
+                device=device,
+                dtype=torch.float32
+            ),
             is_closed=_path_is_closed(i),
             yx_coords=True
         )
         for i in range(skeleton.n_paths)
     ]
 
-    # reconstruct paths with even control point spacing
-    paths = [path.as_uniformly_spaced(control_point_spacing) for path in paths]
+    # resample paths with even control point spacing
+    paths = [
+        path.as_uniformly_spaced(control_point_spacing)
+        for path
+        in paths
+    ]
 
     return paths
 
 
 def trace_paths_in_mask(
-    membrane_mask: torch.Tensor,
-    min_path_length_nm: float,
-    pixel_spacing_angstroms: float,
-    control_point_spacing_nm: float,
+        membrane_mask: torch.Tensor,
+        min_path_length_nm: float,
+        pixel_spacing_angstroms: float,
+        control_point_spacing_nm: float,
 ) -> list[Path2D]:
     """Convert a membrane mask to a list of Path2Ds"""
     # skeletonize membrane mask
@@ -105,8 +112,10 @@ def trace_paths_in_mask(
 
     # construct Path2Ds with target control point spacing from skeleton
     control_point_spacing_px = (control_point_spacing_nm * 10) / pixel_spacing_angstroms
-    paths = skeleton_to_paths(
-        skeleton=skeleton, control_point_spacing=control_point_spacing_px
+    paths = skeleton_to_uniformly_spaced_paths(
+        skeleton=skeleton,
+        control_point_spacing=control_point_spacing_px,
+        device=membrane_mask.device,
     )
 
     # ensure closed paths are anticlockwise

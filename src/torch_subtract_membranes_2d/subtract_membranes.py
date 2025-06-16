@@ -29,7 +29,8 @@ def subtract_membranes(
     # render membrane image
     membrane_image = render_membrane_image(
         membranes=membranes,
-        image_shape=(h, w)
+        image_shape=(h, w),
+        device=image.device,
     )
 
     # subtract membrane image from bandpassed image
