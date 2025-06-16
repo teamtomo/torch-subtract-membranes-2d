@@ -4,6 +4,7 @@ import skimage
 import torch
 
 from torch_subtract_membranes_2d.path_models.path_2d import Path2D
+from torch_subtract_membranes_2d.utils import IS_DEBUG
 
 
 def prune_branches(skeleton: skan.Skeleton) -> skan.Skeleton:
@@ -117,5 +118,15 @@ def trace_paths_in_mask(
         else path
         for path in paths
     ]
+
+    if IS_DEBUG:
+        from matplotlib import pyplot as plt
+        fig, ax = plt.subplots()
+        ax.set_title("initial paths on membrane mask")
+        ax.imshow(membrane_mask.detach().cpu().numpy(), cmap="gray")
+        for path in paths:
+            yx = path.interpolate(u=torch.linspace(0, 1, steps=100))
+            ax.plot(yx[:, -1].cpu().numpy(), yx[:, -2].cpu().numpy())
+        plt.show()
 
     return paths

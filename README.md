@@ -8,3 +8,6 @@
 
 Model membranes in cryo-EM images for accurate signal subtraction.
 
+## Develeopment info
+
+set `TORCH_SUBTRACT_MEMBRANES_2D_DEBUG=1` for debug images/plots with the default matplotlib backend.

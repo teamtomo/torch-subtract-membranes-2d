@@ -3,6 +3,8 @@ import torch
 from torch_image_interpolation import sample_image_1d
 
 from torch_subtract_membranes_2d.membrane_model import Membrane2D
+from torch_subtract_membranes_2d.utils import IS_DEBUG
+from torch_subtract_membranes_2d.utils.debug_utils import set_matplotlib_resolution
 from torch_subtract_membranes_2d.utils.path_utils import find_pixels_around_path
 
 
@@ -70,3 +72,6 @@ def _render_single_membrane_image(
     image[idx_h, idx_w] += signal_scale * values * weights
 
     return image
+
+if IS_DEBUG:
+    set_matplotlib_resolution()

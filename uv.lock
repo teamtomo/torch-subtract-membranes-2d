@@ -2619,20 +2619,6 @@ wheels = [
 ]
 
 [[package]]
-name = "torch-fourier-shift"
-version = "0.0.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "einops" },
-    { name = "numpy" },
-    { name = "torch" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/dc/bfda7caee25b7e33f793f16cb71fbe3348ae010d51ff2422287fc59d52b7/torch_fourier_shift-0.0.5.tar.gz", hash = "sha256:fb4f46fad8821fdc52a5245a5e7897e2e7093190f20a71445427deb440dd6f76", size = 48665 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/7a/6d7ea3874b1473d5f3b2736df9cec217c7f3f96c4969e6ecc416c5a4bc57/torch_fourier_shift-0.0.5-py3-none-any.whl", hash = "sha256:7fdd4cb7171c579ae97abfa86938aab90d414442560903baabc9fb4f21eca620", size = 7081 },
-]
-
-[[package]]
 name = "torch-grid-utils"
 version = "0.0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -2694,7 +2680,6 @@ dependencies = [
     { name = "torch-cubic-spline-grids" },
     { name = "torch-fourier-filter" },
     { name = "torch-fourier-rescale" },
-    { name = "torch-fourier-shift" },
     { name = "torch-image-interpolation" },
     { name = "torch-segment-membranes-2d" },
 ]
@@ -2721,7 +2706,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "pdbpp", marker = "extra == 'dev'" },
     { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "pydantic", specifier = ">=2.11.6" },
+    { name = "pydantic", specifier = ">=2" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "rich", marker = "extra == 'dev'" },
@@ -2732,7 +2717,6 @@ requires-dist = [
     { name = "torch-cubic-spline-grids" },
     { name = "torch-fourier-filter" },
     { name = "torch-fourier-rescale" },
-    { name = "torch-fourier-shift" },
     { name = "torch-image-interpolation" },
     { name = "torch-segment-membranes-2d", specifier = ">=0.0.1" },
 ]
