@@ -1,8 +1,12 @@
+import logging
+from datetime import datetime
+
 import torch
 from torch_segment_membranes_2d import predict_membrane_mask
 
 from torch_subtract_membranes_2d.membrane_model import Membrane2D
 from torch_subtract_membranes_2d.refine_membrane import refine_membrane
+from torch_subtract_membranes_2d.utils.datetime_utils import humanize_timedelta
 from torch_subtract_membranes_2d.utils.image_utils import bandpass_filter_image, normalize_2d
 from torch_subtract_membranes_2d.utils.skeleton_utils import trace_paths_in_mask
 from torch_subtract_membranes_2d.utils.debug_utils import IS_DEBUG, set_matplotlib_resolution
@@ -21,6 +25,7 @@ def model_membranes(
         membrane_mask = membrane_mask.to(device=image.device, dtype=torch.bool)
 
     # normalize and bandpass image
+    print("Normalizing and filtering input image...")
     image = normalize_2d(image)
     image = bandpass_filter_image(
         image=image,
@@ -28,6 +33,7 @@ def model_membranes(
         highpass_angstroms=300,
         lowpass_angstroms=20,
     )
+    print("Input image normalized and filtered")
 
     if IS_DEBUG:
         from matplotlib import pyplot as plt
@@ -38,12 +44,15 @@ def model_membranes(
 
     # predict membrane segmentation if required
     if membrane_mask is None:
+        print("Predicting membrane mask...")
+        logging.getLogger("lightning.pytorch").setLevel(logging.ERROR)
         membrane_mask = predict_membrane_mask(
             image=image,
             pixel_spacing=pixel_spacing_angstroms,
             probability_threshold=0.1
         )
         membrane_mask = membrane_mask.to(image.device)
+        print("Membrane mask predicted")
 
     if IS_DEBUG:
         from matplotlib import pyplot as plt
@@ -53,22 +62,28 @@ def model_membranes(
         plt.show()
 
     # trace paths for each membrane in mask
+    print("Tracing initial paths in membrane mask...")
     paths = trace_paths_in_mask(
         membrane_mask=membrane_mask,
         pixel_spacing_angstroms=pixel_spacing_angstroms,
         min_path_length_nm=min_path_length_nm,
         control_point_spacing_nm=control_point_spacing_nm,
     )
+    print(f"Traced {len(paths)} initial paths")
 
     # refine membrane models against image data
     membrane_models: list[Membrane2D] = []
+    start = datetime.now()
     for idx, path in enumerate(paths):
+        print(f"Refining membrane {idx + 1}/{len(paths)}")
         refined_membrane = refine_membrane(
             path=path,
             image=image,
             pixel_spacing_angstroms=pixel_spacing_angstroms
         )
         membrane_models.append(refined_membrane)
+    end = datetime.now()
+    print(f"time taken for membrane refinement: {humanize_timedelta(end - start)}")
 
     if IS_DEBUG:
         from matplotlib import pyplot as plt
