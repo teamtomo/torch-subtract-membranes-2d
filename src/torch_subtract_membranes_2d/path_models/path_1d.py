@@ -27,14 +27,17 @@ class Path1D:
         else:
             control_points = self.control_points
 
-        # reshape for interpolate_grid_1d: (1, b) for 1D case
+        # force all tensors to same device for interpolation
+        u = u.to(self.control_points.device)
+        interpolation_matrix = CUBIC_CATMULL_ROM_MATRIX.to(self.control_points.device)
         samples = interpolate_grid_1d(
             grid=einops.rearrange(control_points, "b -> 1 b"),
             u=einops.rearrange(u, "b -> b 1"),
-            matrix=CUBIC_CATMULL_ROM_MATRIX
+            matrix=interpolation_matrix
         )
         # squeeze out the dimension that was added for grid interpolation
-        return einops.rearrange(samples, "b 1 -> b")
+        samples = einops.rearrange(samples, "b 1 -> b")
+        return samples
 
     def _handle_closed_path_control_points_and_parameter(self, u: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         # add extra control points at each end to ensure continuity
