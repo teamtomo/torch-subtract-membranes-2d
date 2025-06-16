@@ -10,10 +10,10 @@ class Path2D:
     """2D path with cubic B-spline interpolation"""
 
     def __init__(
-        self,
-        control_points: torch.Tensor | np.ndarray,
-        is_closed: bool,
-        yx_coords: bool = False
+            self,
+            control_points: torch.Tensor | np.ndarray,
+            is_closed: bool,
+            yx_coords: bool = False
     ):
         super().__init__()
 
@@ -36,7 +36,7 @@ class Path2D:
 
         with torch.no_grad():
             sampled_points = self.interpolate(u)
-            sampled_points = sampled_points.cpu().numpy()
+            sampled_points = sampled_points.detach().cpu().numpy()
 
         # check signed area of polygon enclosed by points
         # sum of (x2-x1)*(y2+y1) for each point pair
@@ -58,11 +58,11 @@ class Path2D:
         """Make a new path with uniform spacing between control points."""
         # sample points along the current path
         n_points = 2000
-        u_values = torch.linspace(0, 1, steps=n_points)
+        u_values = torch.linspace(0, 1, steps=n_points, device=self.control_points.device)
 
         with torch.no_grad():
             sampled_points = self.interpolate(u_values)
-            sampled_points = sampled_points.cpu().numpy()
+            sampled_points = sampled_points.detach().cpu().numpy()
 
         # calculate cumulative path length at each point
         diffs = np.diff(sampled_points, axis=0)
@@ -88,6 +88,11 @@ class Path2D:
         if self.is_closed:
             resampled_coords = resampled_coords[:-1]
 
+        # force tensor on correct device
+        resampled_coords = torch.as_tensor(
+            resampled_coords, dtype=torch.float32, device=self.control_points.device
+        )
+
         return self.__class__(control_points=resampled_coords, is_closed=self.is_closed)
 
     def as_reversed(self) -> "Path2D":
@@ -105,10 +110,15 @@ class Path2D:
         else:
             control_points = self.control_points
 
+        # force same device
+        u = u.to(self.control_points.device)
+        interpolation_matrix = CUBIC_CATMULL_ROM_MATRIX.to(self.control_points.device)
+
+        # do interpolation
         samples = interpolate_grid_1d(
             grid=einops.rearrange(control_points, "b c -> c b"),
             u=einops.rearrange(u, "b -> b 1"),
-            matrix=CUBIC_CATMULL_ROM_MATRIX
+            matrix=interpolation_matrix
         )
         return samples
 
@@ -187,9 +197,9 @@ class Path2D:
         return normals
 
     def get_closest_u(
-        self,
-        query_points: torch.Tensor | np.ndarray,
-        n_refinement_steps: int = 50
+            self,
+            query_points: torch.Tensor | np.ndarray,
+            n_refinement_steps: int = 50
     ):
         """
         Find u that interpolates to points on the path closest to query points.
@@ -209,7 +219,9 @@ class Path2D:
             `(b, )` array of parameter values that gives the closest point on the path
         """
         # Convert points to tensor if needed
-        query_points = torch.as_tensor(query_points, dtype=torch.float32)
+        query_points = torch.as_tensor(
+            query_points, dtype=torch.float32, device=self.control_points.device
+        )
 
         # Use heuristic to set initial number of samples if not set
         n_control_points = len(self.control_points)
@@ -228,10 +240,11 @@ class Path2D:
             _, idx = tree.query(query_points.cpu().numpy())
             closest_u_initial = u_initial[idx]
 
-        # then iteratively refinement around that closest point
+        # then iteratively refine around that closest point
         closest_u = torch.tensor(
             closest_u_initial.clone().detach().cpu().numpy(),
             dtype=torch.float32,
+            device=self.control_points.device,
             requires_grad=True
         )
 
@@ -249,9 +262,9 @@ class Path2D:
         return closest_u
 
     def get_signed_distance(
-        self,
-        query_points: torch.Tensor | np.ndarray,
-        closest_u: torch.Tensor | np.ndarray | None = None,
+            self,
+            query_points: torch.Tensor | np.ndarray,
+            closest_u: torch.Tensor | np.ndarray | None = None,
     ):
         if closest_u is None:
             closest_u = self.get_closest_u(query_points)  # (b, )
