@@ -68,6 +68,7 @@ def subtract_membranes(
             Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
             fname = Path(debug_output_directory) / "subtraction_results.png"
             fig.savefig(fname, dpi=300)
+        plt.close()
 
     return subtracted
 

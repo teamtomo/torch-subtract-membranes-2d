@@ -48,6 +48,7 @@ def model_membranes(
             Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
             fname = Path(debug_output_directory) / "preprocessed_image.png"
             fig.savefig(fname, dpi=300)
+        plt.close()
 
     # predict membrane segmentation if required
     if membrane_mask is None:
