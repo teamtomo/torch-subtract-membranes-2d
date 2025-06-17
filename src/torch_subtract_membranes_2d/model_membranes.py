@@ -92,7 +92,7 @@ def model_membranes(
         ax.imshow(membrane_mask.detach().cpu().numpy(), cmap="gray")
         for membrane in membrane_models:
             yx = membrane.path.interpolate(u=torch.linspace(0, 1, steps=100))
-            ax.plot(yx[:, -1], yx[:, -2])
+            ax.plot(yx[:, -1].detach().cpu().numpy(), yx[:, -2].detach().cpu().numpy())
         plt.show()
 
     return membrane_models
