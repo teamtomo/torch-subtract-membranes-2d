@@ -174,6 +174,7 @@ def refine_membrane(
             random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
             fname = Path(debug_output_directory) / f"membrane_refinement_{random_string}.png"
             fig.savefig(fname, dpi=300)
+        plt.close()
 
     return Membrane2D(
         profile_1d=average_1d.detach(),
