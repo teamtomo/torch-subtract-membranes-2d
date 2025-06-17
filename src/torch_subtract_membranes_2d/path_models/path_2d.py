@@ -57,7 +57,7 @@ class Path2D:
     def as_uniformly_spaced(self, spacing: float) -> "Path2D":
         """Make a new path with uniform spacing between control points."""
         # sample points along the current path
-        n_points = 2000
+        n_points = 500
         u_values = torch.linspace(0, 1, steps=n_points, device=self.control_points.device)
 
         with torch.no_grad():

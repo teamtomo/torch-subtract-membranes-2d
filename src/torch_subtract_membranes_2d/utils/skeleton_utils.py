@@ -117,6 +117,14 @@ def trace_paths_in_mask(
         device=membrane_mask.device,
     )
 
+    # remove short paths again - some seem undetected on skeleton
+    paths = [
+        path
+        for path
+        in paths
+        if path.estimated_length() >= min_path_length_px
+    ]
+
     # ensure closed paths are anticlockwise
     # this ensures images and 1d profiles can be interpreted as
     # inside -> outside from left -> right
