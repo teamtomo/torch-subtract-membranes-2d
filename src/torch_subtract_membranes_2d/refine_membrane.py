@@ -1,4 +1,6 @@
+import os
 from copy import deepcopy
+from pathlib import Path
 
 import einops
 import torch
@@ -18,6 +20,7 @@ def refine_membrane(
     image: torch.Tensor,
     pixel_spacing_angstroms: float,
     n_iterations: int = 500,
+    debug_output_directory: os.PathLike | None = None,
 ) -> Membrane2D:
     # get device
     device = image.device
@@ -146,7 +149,7 @@ def refine_membrane(
         else:
             print(f"\r{progress_msg}", end="", flush=True)
 
-    if IS_DEBUG:
+    if IS_DEBUG or debug_output_directory is not None:
         from matplotlib import pyplot as plt
         plt.show()
         fig, ax = plt.subplots(ncols=4)
@@ -164,6 +167,13 @@ def refine_membrane(
         ax[3].axis('off')
         fig.tight_layout()
         plt.show()
+        if debug_output_directory is not None:
+            Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
+            import random
+            import string
+            random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+            fname = Path(debug_output_directory) / f"membrane_refinement_{random_string}.png"
+            fig.savefig(fname, dpi=300)
 
     return Membrane2D(
         profile_1d=average_1d.detach(),

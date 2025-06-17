@@ -1,5 +1,7 @@
 import logging
 from datetime import datetime
+import os
+from pathlib import Path
 
 import torch
 from torch_segment_membranes_2d import predict_membrane_mask
@@ -18,6 +20,7 @@ def model_membranes(
     min_path_length_nm: int = 30,
     control_point_spacing_nm: float = 10,
     membrane_mask: torch.Tensor | None = None,
+    debug_output_directory: os.PathLike | None = None,
 ) -> list[Membrane2D]:
     # ensure correct input dtypes
     image = image.float()
@@ -35,12 +38,16 @@ def model_membranes(
     )
     print("Input image normalized and filtered")
 
-    if IS_DEBUG:
+    if IS_DEBUG or debug_output_directory is not None:
         from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
         ax.set_title("preprocessed image")
         ax.imshow(image.detach().cpu().numpy(), cmap="gray")
         plt.show()
+        if debug_output_directory is not None:
+            Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
+            fname = Path(debug_output_directory) / "preprocessed_image.png"
+            fig.savefig(fname, dpi=300)
 
     # predict membrane segmentation if required
     if membrane_mask is None:
@@ -54,12 +61,16 @@ def model_membranes(
         membrane_mask = membrane_mask.to(image.device)
         print("Membrane mask predicted")
 
-    if IS_DEBUG:
+    if IS_DEBUG or debug_output_directory is not None:
         from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
         ax.set_title("membrane mask")
         ax.imshow(membrane_mask.cpu().numpy())
         plt.show()
+        if debug_output_directory is not None:
+            Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
+            fname = Path(debug_output_directory) / "membrane_mask.png"
+            fig.savefig(fname, dpi=300)
 
     # trace paths for each membrane in mask
     print("Tracing initial paths in membrane mask...")
@@ -79,13 +90,14 @@ def model_membranes(
         refined_membrane = refine_membrane(
             path=path,
             image=image,
-            pixel_spacing_angstroms=pixel_spacing_angstroms
+            pixel_spacing_angstroms=pixel_spacing_angstroms,
+            debug_output_directory=debug_output_directory,
         )
         membrane_models.append(refined_membrane)
     end = datetime.now()
     print(f"time taken for membrane refinement: {humanize_timedelta(end - start)}")
 
-    if IS_DEBUG:
+    if IS_DEBUG or debug_output_directory is not None:
         from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
         ax.set_title("refined paths on membrane mask")
@@ -94,6 +106,11 @@ def model_membranes(
             yx = membrane.path.interpolate(u=torch.linspace(0, 1, steps=100))
             ax.plot(yx[:, -1].detach().cpu().numpy(), yx[:, -2].detach().cpu().numpy())
         plt.show()
+        if debug_output_directory is not None:
+            Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
+            fname = Path(debug_output_directory) / "refined_paths_on_membrane.png"
+            fig.savefig(fname, dpi=300)
+
 
     return membrane_models
 

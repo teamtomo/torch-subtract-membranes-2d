@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 import torch
 
@@ -15,7 +16,8 @@ def subtract_membranes(
     image: torch.Tensor,
     pixel_spacing_angstroms: float,
     membranes: list[Membrane2D],
-    subtraction_factor: float = 1.0
+    subtraction_factor: float = 1.0,
+    debug_output_directory: Path | None = None,
 ) -> torch.Tensor:
     # grab image dimensions
     h, w = image.shape[-2:]
@@ -43,7 +45,7 @@ def subtract_membranes(
     print(f"time taken for membrane subtraction: {humanize_timedelta(end - start)}")
 
 
-    if IS_DEBUG:
+    if IS_DEBUG or debug_output_directory is not None:
         from torch_fourier_rescale import fourier_rescale_2d
         from matplotlib import pyplot as plt
 
@@ -62,6 +64,10 @@ def subtract_membranes(
         axs[2].imshow(subtracted_downscaled.detach().cpu().numpy(), cmap="gray")
         plt.tight_layout()
         plt.show()
+        if debug_output_directory is not None:
+            Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
+            fname = Path(debug_output_directory) / "subtraction_results.png"
+            fig.savefig(fname, dpi=300)
 
     return subtracted
 
