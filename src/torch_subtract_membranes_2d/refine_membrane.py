@@ -9,7 +9,7 @@ from torch_subtract_membranes_2d.membrane_model import Membrane2D
 from torch_subtract_membranes_2d.path_models.path_1d import Path1D
 from torch_subtract_membranes_2d.path_models.path_2d import Path2D
 from torch_subtract_membranes_2d.utils import IS_DEBUG
-from torch_subtract_membranes_2d.utils.debug_utils import set_matplotlib_resolution
+from torch_subtract_membranes_2d.utils.plotting_utils import set_matplotlib_resolution
 from torch_subtract_membranes_2d.utils.image_utils import smooth_tophat_1d
 from torch_subtract_membranes_2d.utils.path_utils import sample_image_along_path
 from torch_subtract_membranes_2d.constants import MEMBRANE_BILAYER_WIDTH_ANGSTROMS
@@ -20,7 +20,7 @@ def refine_membrane(
     image: torch.Tensor,
     pixel_spacing_angstroms: float,
     n_iterations: int = 500,
-    debug_output_directory: os.PathLike | None = None,
+    output_image_directory: os.PathLike | None = None,
 ) -> Membrane2D:
     # get device
     device = image.device
@@ -149,9 +149,8 @@ def refine_membrane(
         else:
             print(f"\r{progress_msg}", end="", flush=True)
 
-    if IS_DEBUG or debug_output_directory is not None:
+    if IS_DEBUG or output_image_directory is not None:
         from matplotlib import pyplot as plt
-        plt.show()
         fig, ax = plt.subplots(ncols=4)
         ax[0].set_title("initial\ndata")
         ax[0].imshow(original_membranogram, cmap="gray")
@@ -166,13 +165,14 @@ def refine_membrane(
         ax[2].axis('off')
         ax[3].axis('off')
         fig.tight_layout()
-        plt.show()
-        if debug_output_directory is not None:
-            Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
+        if IS_DEBUG and output_image_directory is None:
+            plt.show()
+        if output_image_directory is not None:
+            Path(output_image_directory).mkdir(parents=True, exist_ok=True)
             import random
             import string
             random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-            fname = Path(debug_output_directory) / f"membrane_refinement_{random_string}.png"
+            fname = Path(output_image_directory) / f"membrane_refinement_{random_string}.png"
             fig.savefig(fname, dpi=300)
         plt.close()
 
