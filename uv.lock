@@ -2649,7 +2649,7 @@ wheels = [
 
 [[package]]
 name = "torch-segment-membranes-2d"
-version = "0.0.1"
+version = "0.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
@@ -2663,9 +2663,9 @@ dependencies = [
     { name = "torchvision" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/fb/efb63319c29ebe23b090484749aebfebb8af37fa6d96cbcbde9e0584ed53/torch_segment_membranes_2d-0.0.1.tar.gz", hash = "sha256:3cca53b6481d6d50bb295ce92de73d668e92bafe31e8e42b0ec5519fa7c01d00", size = 138538 }
+sdist = { url = "https://files.pythonhosted.org/packages/56/f8/91019370e15496425b3c4c070e4fbaf14ee2dfda4e84bbbdaef6b29fc2ce/torch_segment_membranes_2d-0.0.3.tar.gz", hash = "sha256:761dee10a4208ecd1a51bc36dabb0448b9add3514f11b0a84903be81ea971deb", size = 138547 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/86/ff768e741bade007c65d52fdf69e81f7d21c64bc73ded2a2269971921d93/torch_segment_membranes_2d-0.0.1-py3-none-any.whl", hash = "sha256:01d7c3ed2ad9be8fabfc77ad635de3404e7d573a1c6e1e84582a788ca04a2452", size = 17946 },
+    { url = "https://files.pythonhosted.org/packages/70/fe/886ecb40de778e462e580e8951611f1dc9e43cf2bffce869455e8a2eb618/torch_segment_membranes_2d-0.0.3-py3-none-any.whl", hash = "sha256:af274529b3b117b1744b370f245626499e5337aadce6aa2734e1021a44cfb8ff", size = 17960 },
 ]
 
 [[package]]
@@ -2718,7 +2718,7 @@ requires-dist = [
     { name = "torch-fourier-filter" },
     { name = "torch-fourier-rescale" },
     { name = "torch-image-interpolation" },
-    { name = "torch-segment-membranes-2d", specifier = ">=0.0.1" },
+    { name = "torch-segment-membranes-2d", specifier = ">=0.0.3" },
 ]
 provides-extras = ["dev", "test"]
 

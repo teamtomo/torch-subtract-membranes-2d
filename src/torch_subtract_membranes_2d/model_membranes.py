@@ -57,7 +57,7 @@ def model_membranes(
         membrane_mask = predict_membrane_mask(
             image=image,
             pixel_spacing=pixel_spacing_angstroms,
-            probability_threshold=0.1
+            probability_threshold=0.8
         )
         membrane_mask = membrane_mask.to(image.device)
         print("Membrane mask predicted")
