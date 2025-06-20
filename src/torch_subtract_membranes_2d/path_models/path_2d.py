@@ -93,7 +93,13 @@ class Path2D:
             resampled_coords, dtype=torch.float32, device=self.control_points.device
         )
 
-        return self.__class__(control_points=resampled_coords, is_closed=self.is_closed)
+        # construct instance
+        instance = self.__class__(
+            control_points=resampled_coords,
+            is_closed=self.is_closed,
+            yx_coords=self.yx_coords
+        )
+        return instance
 
     def as_reversed(self) -> "Path2D":
         path = Path2D(
