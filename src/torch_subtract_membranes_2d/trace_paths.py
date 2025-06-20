@@ -9,6 +9,7 @@ from torch_subtract_membranes_2d.path_models.path_2d import Path2D
 from torch_subtract_membranes_2d.utils import IS_DEBUG
 from torch_subtract_membranes_2d.utils.skeleton_utils import prune_branches, remove_short_paths, \
     skeleton_to_uniformly_spaced_paths
+from torch_subtract_membranes_2d.utils.plotting_utils import plot_paths_on_membrane_mask
 
 
 def trace_paths_in_mask(
@@ -57,15 +58,24 @@ def trace_paths_in_mask(
     ]
 
     if IS_DEBUG:
-        from matplotlib import pyplot as plt
-        fig, ax = plt.subplots()
-        ax.set_title("initial paths on membrane mask")
-        ax.imshow(membrane_mask.detach().cpu().numpy(), cmap="gray")
-        for path in paths:
-            yx = path.interpolate(u=torch.linspace(0, 1, steps=100))
-            ax.plot(yx[:, -1].cpu().numpy(), yx[:, -2].cpu().numpy())
-        if IS_DEBUG and output_image_directory is None:
-            plt.show()
-        fig.savefig(Path(output_image_directory) / "initial_paths.png", dpi=300)
+        _plot_initial_paths_debug(
+            membrane_mask=membrane_mask,
+            paths=paths,
+            output_image_directory=output_image_directory,
+        )
 
     return paths
+
+
+def _plot_initial_paths_debug(
+    membrane_mask: torch.Tensor,
+    paths: list[Path2D],
+    output_image_directory: os.PathLike | None,
+) -> None:
+    from matplotlib import pyplot as plt
+    fig = plot_paths_on_membrane_mask(membrane_mask, paths, "initial paths on membrane mask")
+    if IS_DEBUG:
+        plt.show()
+    if output_image_directory is not None:
+        fig.savefig(Path(output_image_directory) / "initial_paths.png", dpi=300)
+    plt.close()
