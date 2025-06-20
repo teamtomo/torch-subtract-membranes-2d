@@ -9,7 +9,7 @@ from torch_subtract_membranes_2d.membrane_model import Membrane2D
 from torch_subtract_membranes_2d.path_models.path_1d import Path1D
 from torch_subtract_membranes_2d.path_models.path_2d import Path2D
 from torch_subtract_membranes_2d.utils import IS_DEBUG
-from torch_subtract_membranes_2d.utils.debug_utils import set_matplotlib_resolution
+from torch_subtract_membranes_2d.utils.plotting_utils import plot_membrane_refinement_comparison
 from torch_subtract_membranes_2d.utils.image_utils import smooth_tophat_1d
 from torch_subtract_membranes_2d.utils.path_utils import sample_image_along_path
 from torch_subtract_membranes_2d.constants import MEMBRANE_BILAYER_WIDTH_ANGSTROMS
@@ -20,7 +20,7 @@ def refine_membrane(
     image: torch.Tensor,
     pixel_spacing_angstroms: float,
     n_iterations: int = 500,
-    debug_output_directory: os.PathLike | None = None,
+    output_image_directory: os.PathLike | None = None,
 ) -> Membrane2D:
     # get device
     device = image.device
@@ -149,32 +149,14 @@ def refine_membrane(
         else:
             print(f"\r{progress_msg}", end="", flush=True)
 
-    if IS_DEBUG or debug_output_directory is not None:
-        from matplotlib import pyplot as plt
-        plt.show()
-        fig, ax = plt.subplots(ncols=4)
-        ax[0].set_title("initial\ndata")
-        ax[0].imshow(original_membranogram, cmap="gray")
-        ax[1].set_title("initial\nreconstruction")
-        ax[1].imshow(original_average_2d_scaled, cmap="gray")
-        ax[2].set_title("refined\ndata")
-        ax[2].imshow(membranogram.detach().cpu().numpy(), cmap="gray")
-        ax[3].set_title("refined\nreconstruction")
-        ax[3].imshow(average_2d_scaled.detach().cpu().numpy(), cmap="gray")
-        ax[0].axis('off')
-        ax[1].axis('off')
-        ax[2].axis('off')
-        ax[3].axis('off')
-        fig.tight_layout()
-        plt.show()
-        if debug_output_directory is not None:
-            Path(debug_output_directory).mkdir(parents=True, exist_ok=True)
-            import random
-            import string
-            random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-            fname = Path(debug_output_directory) / f"membrane_refinement_{random_string}.png"
-            fig.savefig(fname, dpi=300)
-        plt.close()
+    if IS_DEBUG or output_image_directory is not None:
+        _plot_refined_membrane(
+            original_membranogram=original_membranogram,
+            original_profile_2d=original_average_2d_scaled,
+            refined_membranogram=membranogram,
+            refined_profile_2d=average_2d_scaled,
+            output_image_directory=output_image_directory
+        )
 
     return Membrane2D(
         profile_1d=average_1d.detach(),
@@ -184,5 +166,29 @@ def refine_membrane(
         path_is_closed=path.is_closed,
     )
 
-if IS_DEBUG:
-    set_matplotlib_resolution()
+
+def _plot_refined_membrane(
+    original_membranogram,
+    original_profile_2d,
+    refined_membranogram,
+    refined_profile_2d,
+    output_image_directory: os.PathLike | None,
+) -> None:
+    from matplotlib import pyplot as plt
+    fig = plot_membrane_refinement_comparison(
+        original_membranogram,
+        original_profile_2d,
+        refined_membranogram,
+        refined_profile_2d
+    )
+    if IS_DEBUG:
+        plt.show()
+    if output_image_directory is not None:
+        Path(output_image_directory).mkdir(parents=True, exist_ok=True)
+        import random
+        import string
+        random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+        fname = Path(output_image_directory) / f"membrane_refinement_{random_string}.png"
+        fig.savefig(fname, dpi=300)
+    plt.close()
+
