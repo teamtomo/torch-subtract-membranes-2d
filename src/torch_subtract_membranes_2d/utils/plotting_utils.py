@@ -1,17 +1,18 @@
 import torch
-from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
-from .debug_utils import IS_DEBUG
+import matplotlib as mpl
 
-# Set matplotlib resolution once when debug mode is enabled
-if IS_DEBUG:
-    import matplotlib as mpl
-    mpl.rcParams['figure.dpi'] = 300
+from torch_subtract_membranes_2d.utils import IS_DEBUG
 
+# no interactive backend unless in debug mode
+# must be done before importing pyplot
+if not IS_DEBUG:
+    mpl.use("Agg")
 
-def set_matplotlib_resolution():
-    import matplotlib as mpl
-    mpl.rcParams['figure.dpi'] = 300
+from matplotlib import pyplot as plt
+
+# set dpi for all figures
+mpl.rcParams['figure.dpi'] = 300
 
 
 def plot_preprocessed_image(image: torch.Tensor) -> Figure:
@@ -28,7 +29,8 @@ def plot_membrane_mask(membrane_mask: torch.Tensor) -> Figure:
     return fig
 
 
-def plot_paths_on_membrane_mask(membrane_mask: torch.Tensor, membranes, title: str = "paths on membrane mask") -> Figure:
+def plot_paths_on_membrane_mask(membrane_mask: torch.Tensor, membranes,
+                                title: str = "paths on membrane mask") -> Figure:
     fig, ax = plt.subplots()
     ax.set_title(title)
     ax.imshow(membrane_mask.detach().cpu().numpy(), cmap="gray")
@@ -71,7 +73,7 @@ def plot_subtraction_results(
     subtraction_factor: float
 ) -> Figure:
     from torch_fourier_rescale import fourier_rescale_2d
-    
+
     image_downscaled, _ = fourier_rescale_2d(image, source_spacing=1, target_spacing=12)
     membrane_image_downscaled, _ = fourier_rescale_2d(membrane_image, source_spacing=1, target_spacing=12)
     subtracted_downscaled, _ = fourier_rescale_2d(subtracted, source_spacing=1, target_spacing=12)
