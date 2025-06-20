@@ -43,7 +43,7 @@ dependencies = [
     "torch-image-interpolation",
     "torch-fourier-rescale",
     "torch-cubic-spline-grids",
-    "torch-segment-membranes-2d>=0.0.1",
+    "torch-segment-membranes-2d>=0.0.3",
     "pydantic>=2",
 ]
 
