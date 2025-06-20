@@ -52,7 +52,7 @@ def trace_paths_in_mask(
     # inside -> outside from left -> right
     paths = [
         path.as_reversed()
-        if (path.is_clockwise and path.is_closed)
+        if path.is_clockwise
         else path
         for path in paths
     ]
