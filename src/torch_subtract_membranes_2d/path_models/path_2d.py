@@ -24,35 +24,39 @@ class Path2D:
 
     @property
     def is_clockwise(self) -> bool:
-        """Check whether path is clockwise.
+        """Check whether path is clockwise using total turning angle.
 
-         Convention:
+         Axis convention:
          - x coordinate increases moving right
          - y coordinate increases moving up
         """
-        # sample points along the path
-        n_points = 2000
+        # Sample points along the path
+        n_points = 2000 if self.is_closed else 500
         u = torch.linspace(0, 1, steps=n_points)
-
         with torch.no_grad():
             sampled_points = self.interpolate(u)
-            sampled_points = sampled_points.detach().cpu().numpy()
+            points = sampled_points.detach().cpu().numpy()
+        
+        # convert yx to xy
+        if self.yx_coords:
+            points = points[:, [1, 0]]  # swap columns
+        
+        # calculate vectors
+        v1 = points[1:-1] - points[:-2]  # vectors from point i-1 to point i
+        v2 = points[2:] - points[1:-1]   # vectors from point i to point i+1
+        
+        # calculate angles between vectors
+        angles1 = np.arctan2(v1[:, 1], v1[:, 0])
+        angles2 = np.arctan2(v2[:, 1], v2[:, 0])
+        
+        # Calculate angle differences and normalize to [-π, π]
+        angle_diffs = angles2 - angles1
+        angle_diffs = (angle_diffs + np.pi) % (2 * np.pi) - np.pi
+        
+        # Sum all angle differences
+        total_angle = np.sum(angle_diffs)
+        return bool(total_angle < 0)
 
-        # check signed area of polygon enclosed by points
-        # sum of (x2-x1)*(y2+y1) for each point pair
-        if self.yx_coords is True:
-            x1 = sampled_points[:-1, 1]
-            x2 = sampled_points[1:, 1]
-            y1 = sampled_points[:-1, 0]
-            y2 = sampled_points[1:, 0]
-        else:  # xy case
-            x1 = sampled_points[:-1, 0]
-            x2 = sampled_points[1:, 0]
-            y1 = sampled_points[:-1, 1]
-            y2 = sampled_points[1:, 1]
-
-        area = float(0.5 * np.sum((x2 - x1) * (y2 + y1)))
-        return area > 0
 
     def as_uniformly_spaced(self, spacing: float) -> "Path2D":
         """Make a new path with uniform spacing between control points."""
@@ -293,6 +297,8 @@ class Path2D:
             path_length = segment_lengths.sum().item()
 
         return path_length
+
+
 
 
 if __name__ == "__main__":
