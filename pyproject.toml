@@ -66,6 +66,11 @@ dev = [
 homepage = "https://github.com/teamtomo/torch-subtract-membranes-2d"
 repository = "https://github.com/teamtomo/torch-subtract-membranes-2d"
 
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
+
 # Entry points
 # https://peps.python.org/pep-0621/#entry-points
 # same as console_scripts entry point

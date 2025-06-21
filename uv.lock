@@ -2699,6 +2699,11 @@ test = [
     { name = "pytest-cov" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "einops" },
@@ -2721,6 +2726,9 @@ requires-dist = [
     { name = "torch-segment-membranes-2d", specifier = ">=0.0.3" },
 ]
 provides-extras = ["dev", "test"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3.5" }]
 
 [[package]]
 name = "torchmetrics"
