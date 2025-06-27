@@ -58,26 +58,30 @@ def skeleton_to_uniformly_spaced_paths(
     # condition: a closed path has no ends
     endpoints = skeleton.coordinates[skeleton.degrees == 1]
 
-    def _path_is_closed(i: int):
-        path_is_closed = all(
-            endpoint not in skeleton.path_coordinates(i)
-            for endpoint in endpoints
-        )
-        return path_is_closed
-
     # construct path objects
-    paths = [
-        Path2D(
-            control_points=torch.as_tensor(
-                skeleton.path_coordinates(i),
-                device=device,
-                dtype=torch.float32
-            ),
-            is_closed=_path_is_closed(i),
+    paths = []
+    for path_idx in range(skeleton.n_paths):
+        # grab points in path
+        path_points = skeleton.path_coordinates(path_idx)
+
+        # check if path is closed
+        path_is_closed = _path_is_closed(
+            endpoints=endpoints,
+            path_coordinates=path_points
+        )
+
+        # construct path and append
+        control_points = torch.as_tensor(
+            path_points,
+            device=device,
+            dtype=torch.float32
+        )
+        path = Path2D(
+            control_points=control_points,
+            is_closed=path_is_closed,
             yx_coords=True
         )
-        for i in range(skeleton.n_paths)
-    ]
+        paths.append(path)
 
     # resample paths with even control point spacing
     paths = [
@@ -89,3 +93,22 @@ def skeleton_to_uniformly_spaced_paths(
     return paths
 
 
+def _path_is_closed(
+    endpoints: np.ndarray,
+    path_coordinates: np.ndarray
+) -> bool:
+    # convert endpoints to list[tuple[int, int]]
+    endpoints = [(int(yx[0]), int(yx[1])) for yx in endpoints]
+
+    # convert path coordinates to set[tuple[int, int]]
+    path_coordinates = set(
+        (int(yx[0]), int(yx[1]))
+        for yx
+        in path_coordinates
+    )
+
+    # if endpoint in path, path is not closed
+    if any(endpoint in path_coordinates for endpoint in endpoints):
+        return False
+    else:
+        return True
