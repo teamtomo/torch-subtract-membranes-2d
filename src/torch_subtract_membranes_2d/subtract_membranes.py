@@ -18,6 +18,7 @@ def subtract_membranes(
     pixel_spacing_angstroms: float,
     membranes: list[Membrane2D],
     subtraction_factor: float = 1.0,
+    n_threads: int = 1,
     output_image_directory: os.PathLike | None = None,
 ) -> torch.Tensor:
     # grab image dimensions
@@ -37,6 +38,7 @@ def subtract_membranes(
     membrane_image = render_membrane_image(
         membranes=membranes,
         image_shape=(h, w),
+        n_threads=n_threads,
         device=image.device,
     )
 
