@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import torch
 from torch_segment_membranes_2d import predict_membrane_mask
@@ -25,6 +26,7 @@ def model_membranes(
     min_path_length_nm: int = 30,
     control_point_spacing_nm: float = 10,
     membrane_mask: torch.Tensor | None = None,
+    n_threads: int = 1,
     output_image_directory: os.PathLike | None = None,
 ) -> list[Membrane2D]:
     # ensure correct input dtypes
@@ -74,18 +76,48 @@ def model_membranes(
     )
     print(f"Traced {len(paths)} initial paths")
 
-    # refine membrane models against image data
-    membrane_models: list[Membrane2D] = []
+    # refine membrane models against image data in parallel
     start = datetime.now()
-    for idx, path in enumerate(paths):
-        print(f"Refining membrane {idx + 1}/{len(paths)}")
-        refined_membrane = refine_membrane(
-            path=path,
-            image=image,
-            pixel_spacing_angstroms=pixel_spacing_angstroms,
-            output_image_directory=output_image_directory,
-        )
-        membrane_models.append(refined_membrane)
+    print(f"Refining {len(paths)} membranes in parallel...")
+    
+    with ThreadPoolExecutor(max_workers=n_threads) as executor:
+        futures = [
+            executor.submit(
+                refine_membrane,
+                path=path,
+                image=image,
+                pixel_spacing_angstroms=pixel_spacing_angstroms,
+                output_image_directory=output_image_directory,
+            )
+            for path in paths
+        ]
+        membrane_models = []
+        completed_count = 0
+        total_count = len(futures)
+        
+        # Show initial progress
+        print(f"\r{completed_count}/{total_count} (ETA: calculating...)", end="", flush=True)
+        
+        for future in as_completed(futures):
+            membrane_models.append(future.result())
+            completed_count += 1
+            
+            # Calculate ETA based on elapsed time
+            elapsed = datetime.now() - start
+            if completed_count > 0:
+                avg_time_per_task = elapsed.total_seconds() / completed_count
+                remaining_tasks = total_count - completed_count
+                eta_seconds = avg_time_per_task * remaining_tasks
+                eta_minutes = int(eta_seconds // 60)
+                eta_secs = int(eta_seconds % 60)
+                eta_str = f"{eta_minutes}m{eta_secs:02d}s"
+            else:
+                eta_str = "calculating..."
+            
+            print(f"\r{completed_count}/{total_count} (ETA: {eta_str})", end="", flush=True)
+        
+        print()  # Final newline
+    
     end = datetime.now()
     print(f"time taken for membrane refinement: {humanize_timedelta(end - start)}")
 
